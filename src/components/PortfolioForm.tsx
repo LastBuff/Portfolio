@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { usePortfolioStore } from '@/store/portfolioStore'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 const schema = z.object({
   firstName: z.string().min(1, 'กรุณากรอกชื่อ'),
@@ -33,7 +34,7 @@ export default function PortfolioForm() {
   const [projects, setProjects] = useState<string[]>([])
   const [saved, setSaved] = useState(false)
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
@@ -41,7 +42,7 @@ export default function PortfolioForm() {
     reader.readAsDataURL(file)
   }
 
-  const handleMultipleFiles = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string[]) => void) => {
+  const handleMultipleFiles = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
     const files = e.target.files
     if (!files) return
     const arr: string[] = []
@@ -54,6 +55,68 @@ export default function PortfolioForm() {
       reader.readAsDataURL(file)
     })
   }
+
+  // Generic renderFileInput
+  const renderFileInput = <T extends string | string[]>(
+    label: string,
+    single: boolean,
+    fileState: T,
+    setter: React.Dispatch<React.SetStateAction<T>>,
+    borderColor: string,
+    id: string
+  ) => (
+    <div className="mb-4">
+      <label className="block mb-1 font-medium text-gray-800">{label}</label>
+      <div className="relative inline-block">
+        <input
+          type="file"
+          accept="image/*"
+          multiple={!single}
+          id={id}
+          className="absolute w-full h-full opacity-0 cursor-pointer"
+          onChange={(e) =>
+            single
+              ? handleFile(e, setter as React.Dispatch<React.SetStateAction<string>>)
+              : handleMultipleFiles(e, setter as React.Dispatch<React.SetStateAction<string[]>>)
+          }
+        />
+        <label
+          htmlFor={id}
+          className={`bg-indigo-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-indigo-700`}
+        >
+          {single ? 'เลือกไฟล์' : 'เลือกหลายไฟล์'}
+        </label>
+      </div>
+      <p className="mt-1 text-gray-700">
+        {single
+          ? fileState ? 'ไฟล์: ' + (fileState as string).slice(-15) : 'ยังไม่ได้เลือกไฟล์'
+          : (fileState as string[]).length > 0 ? 'จำนวนไฟล์: ' + (fileState as string[]).length : 'ยังไม่ได้เลือกไฟล์'}
+      </p>
+      <div className="flex flex-wrap gap-2 mt-2">
+        {single
+          ? fileState && (
+              <Image
+                src={fileState as string}
+                alt={label}
+                width={128}
+                height={128}
+                className={`object-cover rounded border-2 ${borderColor}`}
+              />
+            )
+          : (fileState as string[]).map((img, i) => (
+              <Image
+                key={i}
+                src={img}
+                alt={`${label} ${i + 1}`}
+                width={96}
+                height={96}
+                className={`object-cover rounded border-2 ${borderColor}`}
+              />
+            ))
+        }
+      </div>
+    </div>
+  )
 
   const onSubmit = (data: FormData) => {
     addStudent({
@@ -71,46 +134,6 @@ export default function PortfolioForm() {
     setProjects([])
     setSaved(true)
   }
-
-  const renderFileInput = (
-    label: string,
-    single: boolean,
-    fileState: string | string[],
-    setter: any,
-    borderColor: string,
-    id: string
-  ) => (
-    <div className="mb-4">
-      <label className="block mb-1 font-medium text-gray-800">{label}</label>
-      <div className="relative inline-block">
-        <input
-          type="file"
-          accept="image/*"
-          multiple={!single}
-          id={id}
-          className="absolute w-full h-full opacity-0 cursor-pointer"
-          onChange={(e) => single ? handleFile(e, setter) : handleMultipleFiles(e, setter)}
-        />
-        <label
-          htmlFor={id}
-          className={`bg-indigo-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-indigo-700`}
-        >
-          {single ? 'เลือกไฟล์' : 'เลือกหลายไฟล์'}
-        </label>
-      </div>
-      <p className="mt-1 text-gray-700">
-        {single
-          ? fileState ? 'ไฟล์: ' + (fileState as string).slice(-15) : 'ยังไม่ได้เลือกไฟล์'
-          : (fileState as string[]).length > 0 ? 'จำนวนไฟล์: ' + (fileState as string[]).length : 'ยังไม่ได้เลือกไฟล์'}
-      </p>
-      <div className="flex flex-wrap gap-2 mt-2">
-        {single
-          ? fileState && <img src={fileState as string} className={`w-32 h-32 object-cover rounded border-2 ${borderColor}`} />
-          : (fileState as string[]).map((img, i) => <img key={i} src={img} className={`w-24 h-24 object-cover rounded border-2 ${borderColor}`} />)
-        }
-      </div>
-    </div>
-  )
 
   return (
     <div className="max-w-4xl mx-auto mt-8">
@@ -135,7 +158,7 @@ export default function PortfolioForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block mb-1 font-medium text-gray-800">ชื่อ</label>
+            <label className="block mb-1 font-medium text-black">ชื่อ</label>
             <input {...register('firstName')} className="w-full border p-2 rounded focus:ring-2 focus:ring-indigo-400 text-black" />
             {errors.firstName && <p className="text-red-600 text-sm">{errors.firstName.message}</p>}
           </div>
@@ -179,8 +202,8 @@ export default function PortfolioForm() {
 
         {renderFileInput('รูปนักเรียน', true, studentImage, setStudentImage, 'border-indigo-300', 'studentImage')}
         {renderFileInput('รางวัล', false, awards, setAwards, 'border-green-300', 'awards')}
-        {renderFileInput('กิจกรรม', false, activities, setActivities,'border-blue-300', 'activities')}
-        {renderFileInput('ผลงาน', false, projects,setProjects, 'border-purple-300', 'projects')}
+        {renderFileInput('กิจกรรม', false, activities, setActivities, 'border-blue-300', 'activities')}
+        {renderFileInput('ผลงาน', false, projects, setProjects, 'border-purple-300', 'projects')}
 
         <button type="submit" className="w-full bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
           บันทึก Portfolio
